@@ -177,6 +177,16 @@ class UndiscordCore {
         }
         await deleteMessagesFromList(this.state, this.options, this.stats, this.beforeRequest.bind(this), this.afterRequest.bind(this), this.printStats.bind(this), this.calcEtr.bind(this), this.onProgress);
         this.state.emptyPageRetryCount = 0;
+
+        // exit immediately if all messages have been processed
+        const allDone = this.state.grandTotal > 0
+          && (this.state.delCount + this.state.failCount) >= this.state.grandTotal;
+        if (allDone) {
+          log.verb('All messages have been processed.');
+          log.verb('[End state]', this.state);
+          if (isJob) break;
+          this.state.running = false;
+        }
       }
       else if (skipped.length > 0) {
         const oldOffset = this.state.offset;

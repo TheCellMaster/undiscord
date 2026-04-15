@@ -186,11 +186,15 @@ class UndiscordCore {
         this.state.emptyPageRetryCount = 0;
       }
       else {
-        if (this.state.emptyPageRetryCount < this.options.emptyPageRetries) {
+        // if all messages have been processed, no point retrying empty pages
+        const allProcessed = this.state.grandTotal > 0
+          && (this.state.delCount + this.state.failCount) >= this.state.grandTotal;
+
+        if (!allProcessed && this.state.emptyPageRetryCount < this.options.emptyPageRetries) {
           this.state.emptyPageRetryCount++;
           log.warn(`API returned an empty page. Retrying... (${this.state.emptyPageRetryCount}/${this.options.emptyPageRetries})`);
         } else {
-          log.verb('Ended because API returned an empty page.');
+          log.verb(allProcessed ? 'All messages have been processed.' : 'Ended because API returned an empty page.');
           log.verb('[End state]', this.state);
           if (isJob) break;
           this.state.running = false;

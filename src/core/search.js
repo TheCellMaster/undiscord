@@ -54,12 +54,13 @@ export async function searchWithRetry(options, state, stats, beforeRequest, afte
         let w = (await resp.json()).retry_after * 1000;
         w = Math.max(w, 0) || options.searchDelay;
         stats.throttledCount++;
-        stats.throttledTotalTime += w;
+        const cooldown = w * 2;
+        stats.throttledTotalTime += cooldown;
         options.searchDelay = Math.min(options.searchDelay + 100, MAX_SEARCH_DELAY_MS);
         log.warn(`Being rate limited by the API for ${w}ms! Increasing search delay to ${options.searchDelay}ms...`);
         printStats();
-        log.verb(`Cooling down for ${w * 2}ms before retrying...`);
-        await wait(w * 2);
+        log.verb(`Cooling down for ${cooldown}ms before retrying...`);
+        await wait(cooldown);
         continue;
       }
       else if (resp.status === 403) {

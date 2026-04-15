@@ -672,12 +672,13 @@
 	        let w = (await resp.json()).retry_after * 1000;
 	        w = Math.max(w, 0) || options.searchDelay;
 	        stats.throttledCount++;
-	        stats.throttledTotalTime += w;
+	        const cooldown = w * 2;
+	        stats.throttledTotalTime += cooldown;
 	        options.searchDelay = Math.min(options.searchDelay + 100, MAX_SEARCH_DELAY_MS);
 	        log.warn(`Being rate limited by the API for ${w}ms! Increasing search delay to ${options.searchDelay}ms...`);
 	        printStats();
-	        log.verb(`Cooling down for ${w * 2}ms before retrying...`);
-	        await wait(w * 2);
+	        log.verb(`Cooling down for ${cooldown}ms before retrying...`);
+	        await wait(cooldown);
 	        continue;
 	      }
 	      else if (resp.status === 403) {
@@ -846,7 +847,8 @@
 	    if (resp.status === 429) {
 	      const w = Math.max((await resp.json()).retry_after * 1000, 0) || options.deleteDelay;
 	      stats.throttledCount++;
-	      stats.throttledTotalTime += w;
+	      const cooldown = w * 2;
+	      stats.throttledTotalTime += cooldown;
 	      if (w > options.deleteDelay) {
 	        options.deleteDelay = Math.min(options.deleteDelay + w, MAX_DELETE_DELAY_MS);
 	        log.warn(`Being rate limited by the API for ${w}ms! Adjusted delete delay to ${options.deleteDelay}ms.`);
@@ -854,8 +856,8 @@
 	        log.warn(`Being rate limited by the API for ${w}ms!`);
 	      }
 	      printStats();
-	      log.verb(`Cooling down for ${w * 2}ms before retrying...`);
-	      await wait(w * 2);
+	      log.verb(`Cooling down for ${cooldown}ms before retrying...`);
+	      await wait(cooldown);
 	      return DELETE_RESULT.RETRY;
 	    } else if (resp.status === 403) {
 	      log.warn('Insufficient permissions to delete message. Skipping...');
@@ -898,7 +900,7 @@
 	    if (!state.running) return log.error('Stopped by you!');
 
 	    log.debug(
-	      `[${state.delCount + 1}/${state.grandTotal}] ` +
+	      `[${state.delCount + state.failCount + 1}/${state.grandTotal}] ` +
 	      `${new Date(message.timestamp).toLocaleString()} ` +
 	      `${redact((message.author?.username || 'Unknown') + '#' + (message.author?.discriminator || '0000'))}` +
 	      `: ${redact((message.content || '').replace(/\n/g, '↵'))}` +
@@ -1033,12 +1035,13 @@
 
 	      this.options = { ...this.options, ...job };
 
+	      this._userStopped = false;
 	      try {
 	        await this.run(true);
 	      } catch (err) {
 	        log.error('Job failed, skipping to next...', err);
 	      }
-	      if (!this.state.running) break;
+	      if (this._userStopped) break; // user clicked Stop — respect it
 
 	      log.info('Job ended.', `(${i + 1}/${queue.length})`);
 	      this.resetState();
@@ -1134,13 +1137,15 @@
 	    this.printStats();
 	    log.debug(`Deleted ${this.state.delCount} messages, ${this.state.failCount} failed.\n`);
 
-	    if (this.onStop) this.onStop(this.state, this.stats);
+	    // only call onStop if stop() hasn't already called it
+	    if (!this._userStopped && this.onStop) this.onStop(this.state, this.stats);
 	  }
 
-	  /** Stop the deletion process. */
+	  /** Stop the deletion process (user-initiated). */
 	  stop() {
 	    if (!this.state.running) return;
 	    this.state.running = false;
+	    this._userStopped = true;
 	    if (this.onStop) this.onStop(this.state, this.stats);
 	  }
 

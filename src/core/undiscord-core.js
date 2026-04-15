@@ -103,12 +103,13 @@ class UndiscordCore {
 
       this.options = { ...this.options, ...job };
 
+      this._userStopped = false;
       try {
         await this.run(true);
       } catch (err) {
         log.error('Job failed, skipping to next...', err);
       }
-      if (!this.state.running) break;
+      if (this._userStopped) break; // user clicked Stop — respect it
 
       log.info('Job ended.', `(${i + 1}/${queue.length})`);
       this.resetState();
@@ -204,13 +205,15 @@ class UndiscordCore {
     this.printStats();
     log.debug(`Deleted ${this.state.delCount} messages, ${this.state.failCount} failed.\n`);
 
-    if (this.onStop) this.onStop(this.state, this.stats);
+    // only call onStop if stop() hasn't already called it
+    if (!this._userStopped && this.onStop) this.onStop(this.state, this.stats);
   }
 
-  /** Stop the deletion process. */
+  /** Stop the deletion process (user-initiated). */
   stop() {
     if (!this.state.running) return;
     this.state.running = false;
+    this._userStopped = true;
     if (this.onStop) this.onStop(this.state, this.stats);
   }
 

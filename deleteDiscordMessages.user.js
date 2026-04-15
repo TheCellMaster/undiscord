@@ -1146,9 +1146,10 @@
 	    if (this.onStop) this.onStop(this.state, this.stats);
 	  }
 
-	  /** Calculate estimated time remaining. */
+	  /** Calculate estimated time remaining based on messages left to process. */
 	  calcEtr() {
-	    this.stats.etr = (this.options.searchDelay * Math.round(this.state.grandTotal / MESSAGES_PER_PAGE)) + ((this.options.deleteDelay + this.stats.avgPing) * this.state.grandTotal);
+	    const remaining = Math.max(this.state.grandTotal - this.state.delCount - this.state.failCount, 0);
+	    this.stats.etr = (this.options.searchDelay * Math.round(remaining / MESSAGES_PER_PAGE)) + ((this.options.deleteDelay + this.stats.avgPing) * remaining);
 	  }
 
 	  /**

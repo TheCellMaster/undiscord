@@ -65,6 +65,7 @@ class UndiscordCore {
   onStart = undefined;
   onProgress = undefined;
   onStop = undefined;
+  _userStopped = false;
 
   /** Reset state between runs. Stats are NOT reset intentionally,
    *  so they accumulate across batch jobs for the full session summary. */
@@ -129,6 +130,7 @@ class UndiscordCore {
     if (this.state.running && !isJob) return log.error('Already running!');
 
     this.state.running = true;
+    this._userStopped = false;
     this.stats.startTime = new Date();
 
     log.success(`\nStarted at ${this.stats.startTime.toLocaleString()}`);
@@ -195,8 +197,11 @@ class UndiscordCore {
         }
       }
 
-      log.verb(`Waiting ${(this.options.searchDelay / 1000).toFixed(2)}s before next page...`);
-      await wait(this.options.searchDelay);
+      // only wait if we're continuing — skip the delay if we're done
+      if (this.state.running) {
+        log.verb(`Waiting ${(this.options.searchDelay / 1000).toFixed(2)}s before next page...`);
+        await wait(this.options.searchDelay);
+      }
 
     } while (this.state.running);
 
@@ -211,8 +216,8 @@ class UndiscordCore {
 
   /** Stop the deletion process (user-initiated). */
   stop() {
-    if (!this.state.running) return;
     this.state.running = false;
+    if (this._userStopped) return; // already stopped
     this._userStopped = true;
     if (this.onStop) this.onStop(this.state, this.stats);
   }

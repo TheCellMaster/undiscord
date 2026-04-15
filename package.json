@@ -1,7 +1,7 @@
 {
   "name": "undiscord",
   "nameFull": "Undiscord",
-  "version": "5.3.0",
+  "version": "5.3.1",
   "description": "Delete all messages in a Discord channel or DM (Bulk deletion)",
   "userScript": {
     "namespace": "https://github.com/victornpb/deleteDiscordMessages",

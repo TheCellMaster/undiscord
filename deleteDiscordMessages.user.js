@@ -658,12 +658,10 @@
 	      throw err;
 	    }
 
-	    // not indexed yet
+	    // not indexed yet (not a rate limit — don't count as throttled)
 	    if (resp.status === 202) {
 	      let w = (await resp.json()).retry_after * 1000;
 	      w = Math.max(w, 0) || options.searchDelay;
-	      stats.throttledCount++;
-	      stats.throttledTotalTime += w;
 	      log.warn(`This channel isn't indexed yet. Waiting ${w}ms for discord to index it...`);
 	      await wait(w);
 	      continue;
@@ -988,8 +986,8 @@
 	    startTime: new Date(),
 	    throttledCount: 0,
 	    throttledTotalTime: 0,
-	    lastPing: null,
-	    avgPing: null,
+	    lastPing: 0,
+	    avgPing: 0,
 	    etr: 0,
 	  };
 
@@ -1149,7 +1147,7 @@
 	  /** Calculate estimated time remaining based on messages left to process. */
 	  calcEtr() {
 	    const remaining = Math.max(this.state.grandTotal - this.state.delCount - this.state.failCount, 0);
-	    this.stats.etr = (this.options.searchDelay * Math.round(remaining / MESSAGES_PER_PAGE)) + ((this.options.deleteDelay + this.stats.avgPing) * remaining);
+	    this.stats.etr = (this.options.searchDelay * Math.ceil(remaining / MESSAGES_PER_PAGE)) + ((this.options.deleteDelay + this.stats.avgPing) * remaining);
 	  }
 
 	  /**
@@ -1608,12 +1606,12 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	    const remaining = msToHMS(stats.etr);
 	    ui.percent.textContent = `${percent} (${value}/${max}) Elapsed: ${elapsed} Remaining: ${remaining}`;
 
-	    ui.progressIcon.value = value;
-	    ui.progressMain.value = value;
-
+	    // set max before value to avoid brief 100% glitch on first update
 	    if (max) {
 	      ui.progressIcon.setAttribute('max', max);
 	      ui.progressMain.setAttribute('max', max);
+	      ui.progressIcon.value = value;
+	      ui.progressMain.value = value;
 	    } else {
 	      ui.progressIcon.removeAttribute('value');
 	      ui.progressMain.removeAttribute('value');

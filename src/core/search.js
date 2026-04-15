@@ -40,12 +40,10 @@ export async function searchWithRetry(options, state, stats, beforeRequest, afte
       throw err;
     }
 
-    // not indexed yet
+    // not indexed yet (not a rate limit — don't count as throttled)
     if (resp.status === 202) {
       let w = (await resp.json()).retry_after * 1000;
       w = Math.max(w, 0) || options.searchDelay;
-      stats.throttledCount++;
-      stats.throttledTotalTime += w;
       log.warn(`This channel isn't indexed yet. Waiting ${w}ms for discord to index it...`);
       await wait(w);
       continue;

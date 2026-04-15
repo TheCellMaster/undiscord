@@ -26,12 +26,12 @@ export function setupProgress(undiscordCore, ui, $) {
     const remaining = msToHMS(stats.etr);
     ui.percent.textContent = `${percent} (${value}/${max}) Elapsed: ${elapsed} Remaining: ${remaining}`;
 
-    ui.progressIcon.value = value;
-    ui.progressMain.value = value;
-
+    // set max before value to avoid brief 100% glitch on first update
     if (max) {
       ui.progressIcon.setAttribute('max', max);
       ui.progressMain.setAttribute('max', max);
+      ui.progressIcon.value = value;
+      ui.progressMain.value = value;
     } else {
       ui.progressIcon.removeAttribute('value');
       ui.progressMain.removeAttribute('value');

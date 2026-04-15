@@ -56,8 +56,8 @@ class UndiscordCore {
     startTime: new Date(),
     throttledCount: 0,
     throttledTotalTime: 0,
-    lastPing: null,
-    avgPing: null,
+    lastPing: 0,
+    avgPing: 0,
     etr: 0,
   };
 
@@ -217,7 +217,7 @@ class UndiscordCore {
   /** Calculate estimated time remaining based on messages left to process. */
   calcEtr() {
     const remaining = Math.max(this.state.grandTotal - this.state.delCount - this.state.failCount, 0);
-    this.stats.etr = (this.options.searchDelay * Math.round(remaining / MESSAGES_PER_PAGE)) + ((this.options.deleteDelay + this.stats.avgPing) * remaining);
+    this.stats.etr = (this.options.searchDelay * Math.ceil(remaining / MESSAGES_PER_PAGE)) + ((this.options.deleteDelay + this.stats.avgPing) * remaining);
   }
 
   /**
